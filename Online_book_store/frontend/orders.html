@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Order History - Online Book Store</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="logo" onclick="window.location.href='index.html'">📚 BookStore</div>
+      <div class="nav-actions">
+        <span id="userGreeting" style="color: white; font-weight: 600;"></span>
+        <button class="nav-btn" onclick="logout()">🚪 Logout</button>
+      </div>
+    </div>
+  </nav>
+
+  <main class="container">
+    <section class="orders-section">
+      <div class="section-header">
+        <h2>My Order History</h2>
+        <p class="subtitle">View your past purchases</p>
+      </div>
+      
+      <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Loading orders...</p>
+      </div>
+      
+      <div id="ordersContainer"></div>
+      
+      <div id="noOrders" class="no-results" style="display: none;">
+        <div class="no-results-icon">📭</div>
+        <p>You haven't placed any orders yet</p>
+        <button class="reset-btn" onclick="window.location.href='books.html'">Start Shopping</button>
+      </div>
+    </section>
+  </main>
+
+  <footer class="footer">
+    <p>&copy; 2026 Online Book Store. All rights reserved.</p>
+  </footer>
+
+  <script>
+    const currentUser = localStorage.getItem("currentUser");
+
+    window.addEventListener("load", function() {
+      if (!currentUser) {
+        window.location.href = "login.html";
+        return;
+      }
+      
+      document.getElementById("userGreeting").textContent = `Welcome, ${currentUser}!`;
+      loadOrders();
+    });
+
+    function loadOrders() {
+      const loading = document.getElementById("loading");
+      const container = document.getElementById("ordersContainer");
+      const noOrders = document.getElementById("noOrders");
+      
+      loading.style.display = "block";
+      container.innerHTML = "";
+      noOrders.style.display = "none";
+      
+      fetch(`/api/orders/${currentUser}`)
+        .then(r => r.json())
+        .then(orders => {
+          loading.style.display = "none";
+          
+          if (!orders || orders.length === 0) {
+            noOrders.style.display = "block";
+            return;
+          }
+          
+          let html = "<div class='orders-list'>";
+          orders.forEach((order, index) => {
+            html += `
+              <div class="order-card">
+                <div class="order-header">
+                  <h3>Order #${order.id}</h3>
+                  <span class="order-status ${order.status}">${order.status.toUpperCase()}</span>
+                </div>
+                <p class="order-date">📅 ${new Date(order.date).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}</p>
+                <div class="order-items">
+                  <h4>Items:</h4>
+                  <ul>
+                    ${order.items.map(item => `<li>${item.title} × ${item.quantity} - ₹${item.price * item.quantity}</li>`).join('')}
+                  </ul>
+                </div>
+                <div class="order-footer">
+                  <span class="order-total">Total: ₹${order.total}</span>
+                </div>
+              </div>
+            `;
+          });
+          html += "</div>";
+          container.innerHTML = html;
+        })
+        .catch(e => {
+          loading.style.display = "none";
+          container.innerHTML = "<p style='color: red;'>Error loading orders</p>";
+        });
+    }
+
+    function logout() {
+      localStorage.removeItem("currentUser");
+      window.location.href = "login.html";
+    }
+  </script>
+
+</body>
+</html>

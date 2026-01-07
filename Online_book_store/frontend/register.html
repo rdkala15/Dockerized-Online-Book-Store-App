@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Register - Online Book Store</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    body {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      margin: 0;
+    }
+    .register-wrapper { flex: 1; display: flex; align-items: center; justify-content: center; padding: 20px; }
+    .register-box { background: white; border-radius: 20px; box-shadow: 0 20px 60px rgba(0,0,0,.3); overflow: hidden; max-width: 500px; width: 100%; animation: slideUp .5s ease-out; }
+    @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
+    .register-header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 50px 30px; text-align: center; }
+    .logo-icon { font-size: 48px; margin-bottom: 15px; }
+    .register-header h1 { margin: 0 0 10px 0; font-size: 32px; font-weight: 700; }
+    .register-header p { margin: 0; font-size: 15px; opacity: .95; font-weight: 300; }
+    .register-content { padding: 40px 35px; }
+    .form-group { margin-bottom: 20px; }
+    .form-group label { display: block; font-weight: 600; color: #333; margin-bottom: 8px; font-size: 14px; }
+    .form-group input { width: 100%; padding: 12px 15px; border: 2px solid #e0e0e0; border-radius: 10px; font-size: 14px; transition: all .3s ease; box-sizing: border-box; background: #fafafa; }
+    .form-group input:focus { outline: none; border-color: #667eea; background: white; box-shadow: 0 0 0 4px rgba(102,126,234,.1); }
+    .password-requirements { background: #f5f5f5; padding: 12px; border-radius: 8px; font-size: 12px; color: #666; margin-bottom: 20px; border-left: 3px solid #ddd; }
+    .requirement { display: flex; align-items: center; margin-bottom: 6px; }
+    .requirement span { display: inline-block; width: 16px; height: 16px; background: #ddd; border-radius: 50%; text-align: center; line-height: 16px; font-size: 11px; color: white; margin-right: 8px; }
+    .requirement.met span { background: #4caf50; }
+    .requirement.met { color: #4caf50; }
+    .register-btn { width: 100%; padding: 13px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 10px; font-size: 15px; font-weight: 600; cursor: pointer; transition: all .3s ease; margin-top: 5px; }
+    .register-btn:hover:not(:disabled) { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(102,126,234,.4); }
+    .register-btn:disabled { opacity: .6; cursor: not-allowed; }
+    .spinner { display: inline-block; width: 14px; height: 14px; border: 2px solid rgba(255,255,255,.3); border-top-color: white; border-radius: 50%; animation: spin .8s linear infinite; margin-right: 8px; vertical-align: middle; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .error-msg { background: #fee; color: #c33; padding: 12px 14px; border-radius: 8px; margin-bottom: 18px; font-size: 13px; border-left: 4px solid #c33; display: none; }
+    .error-msg.show { display: block; }
+    .success-msg { background: #efe; color: #3c3; padding: 12px 14px; border-radius: 8px; margin-bottom: 18px; font-size: 13px; border-left: 4px solid #3c3; display: none; }
+    .success-msg.show { display: block; }
+    .register-footer { text-align: center; padding: 20px 35px; background: #f8f9fa; font-size: 13px; }
+    .register-footer p { margin: 0; color: #666; }
+    .register-footer a { color: #667eea; text-decoration: none; font-weight: 600; }
+    .back-btn { position: absolute; top: 20px; left: 20px; background: rgba(255,255,255,.95); border: none; padding: 10px 16px; border-radius: 8px; cursor: pointer; font-weight: 500; color: #333; font-size: 14px; transition: all .3s ease; box-shadow: 0 2px 8px rgba(0,0,0,.1); }
+    .back-btn:hover { background: white; transform: translateX(-3px); }
+    body.dark-mode { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+    body.dark-mode .register-box { background: #2a2a2a; }
+    body.dark-mode .register-header { background: linear-gradient(135deg, #0f3460 0%, #16213e 100%); }
+    body.dark-mode .form-group label { color: #e0e0e0; }
+    body.dark-mode .form-group input { background: #1a1a1a; color: #fff; border-color: #404040; }
+    body.dark-mode .password-requirements { background: #1a1a1a; color: #b0b0b0; border-left-color: #404040; }
+    body.dark-mode .register-footer { background: #1a1a1a; color: #999; }
+    body.dark-mode .back-btn { background: rgba(255,255,255,.1); color: #fff; }
+  </style>
+</head>
+<body>
+  <button class="back-btn" onclick="window.location.href='index.html'">← Back Home</button>
+  <div class="register-wrapper">
+    <div class="register-box">
+      <div class="register-header">
+        <div class="logo-icon">📚</div>
+        <h1>Create Account</h1>
+        <p>Join BookStore and start shopping today</p>
+      </div>
+      <div class="register-content">
+        <div id="successMsg" class="success-msg"></div>
+        <div id="errorMsg" class="error-msg"></div>
+        <form id="registerForm" onsubmit="handleRegister(event)">
+          <div class="form-group">
+            <label for="username">👤 Username</label>
+            <input type="text" id="username" name="username" placeholder="Choose a username" required autocomplete="username">
+          </div>
+          <div class="form-group">
+            <label for="email">📧 Email Address</label>
+            <input type="email" id="email" name="email" placeholder="Enter your email" required autocomplete="email">
+          </div>
+          <div class="form-group">
+            <label for="password">🔐 Password</label>
+            <input type="password" id="password" name="password" placeholder="Create a strong password" required autocomplete="new-password" oninput="checkPasswordStrength()">
+          </div>
+          <div class="password-requirements">
+            <div class="requirement" id="req-length"><span id="req-length-icon">✗</span> At least 6 characters</div>
+            <div class="requirement" id="req-uppercase"><span id="req-uppercase-icon">✗</span> One uppercase letter</div>
+            <div class="requirement" id="req-number"><span id="req-number-icon">✗</span> One number</div>
+          </div>
+          <div class="form-group">
+            <label for="confirmPassword">✓ Confirm Password</label>
+            <input type="password" id="confirmPassword" name="confirmPassword" placeholder="Re-enter your password" required autocomplete="new-password">
+          </div>
+          <button type="submit" class="register-btn" id="registerBtn">
+            <span id="buttonText">Create Account</span>
+            <span id="loading" style="display: none;"><span class="spinner"></span>Creating...</span>
+          </button>
+        </form>
+      </div>
+      <div class="register-footer">
+        <p>Already have an account? <a href="login.html">Sign in here</a></p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let darkMode = localStorage.getItem('darkMode') === 'true';
+    window.addEventListener("load", function() { applyDarkMode(); });
+    function applyDarkMode() { if (darkMode) document.body.classList.add('dark-mode'); else document.body.classList.remove('dark-mode'); }
+    function checkPasswordStrength() {
+      const password = document.getElementById("password").value;
+      updateRequirement("req-length", password.length >= 6);
+      updateRequirement("req-uppercase", /[A-Z]/.test(password));
+      updateRequirement("req-number", /[0-9]/.test(password));
+    }
+    function updateRequirement(id, met) {
+      const element = document.getElementById(id);
+      const icon = document.getElementById(id + "-icon");
+      if (met) { element.classList.add("met"); icon.textContent = "✓"; } else { element.classList.remove("met"); icon.textContent = "✗"; }
+    }
+    function handleRegister(event) {
+      event.preventDefault();
+      const username = document.getElementById("username").value.trim();
+      const email = document.getElementById("email").value.trim();
+      const password = document.getElementById("password").value;
+      const confirmPassword = document.getElementById("confirmPassword").value;
+      const errorDiv = document.getElementById("errorMsg");
+      const successDiv = document.getElementById("successMsg");
+      const registerBtn = document.getElementById("registerBtn");
+      errorDiv.classList.remove("show");
+      successDiv.classList.remove("show");
+      if (!username || !email || !password || !confirmPassword) { showError("Please fill in all fields"); return; }
+      if (password !== confirmPassword) { showError("❌ Passwords don't match"); return; }
+      if (password.length < 6) { showError("❌ Password must be at least 6 characters"); return; }
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { showError("❌ Please enter a valid email"); return; }
+      registerBtn.disabled = true;
+      document.getElementById("buttonText").style.display = "none";
+      document.getElementById("loading").style.display = "inline";
+      fetch("/api/auth/register", {
+        method: "POST",
+        headers: {"Content-Type": "application/json"},
+        body: JSON.stringify({username, email, password})
+      }).then(r => r.json()).then(data => {
+        if (data.message && data.message.includes("successful")) {
+          showSuccess("✅ Account created! Redirecting...");
+          setTimeout(() => { window.location.href = "login.html"; }, 1500);
+        } else {
+          showError(data.error || "❌ Registration failed");
+          registerBtn.disabled = false;
+          document.getElementById("buttonText").style.display = "inline";
+          document.getElementById("loading").style.display = "none";
+        }
+      }).catch(e => {
+        showError("❌ Connection error");
+        registerBtn.disabled = false;
+        document.getElementById("buttonText").style.display = "inline";
+        document.getElementById("loading").style.display = "none";
+      });
+    }
+    function showError(message) {
+      const errorDiv = document.getElementById("errorMsg");
+      errorDiv.textContent = message;
+      errorDiv.classList.add("show");
+      setTimeout(() => { errorDiv.classList.remove("show"); }, 5000);
+    }
+    function showSuccess(message) {
+      const successDiv = document.getElementById("successMsg");
+      successDiv.textContent = message;
+      successDiv.classList.add("show");
+    }
+  </script>
+
+  <nav class="navbar" style="display:none;">
+  </script>
+
+</body>
+</html>

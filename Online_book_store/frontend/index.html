@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Online Book Store - Premium Books at Great Prices</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="logo">📚 BookStore</div>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="hero-content">
+      <h1>Welcome to Our Online Book Store</h1>
+      <p>Discover thousands of books across all genres</p>
+      <button class="cta-button" onclick="window.location.href='books.html'">Explore Books Now</button>
+    </div>
+  </header>
+
+  <section class="features-section">
+    <div class="container">
+      <h2>Why Choose Us?</h2>
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">📚</div>
+          <h3>Wide Selection</h3>
+          <p>Thousands of books across all genres and categories</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">💳</div>
+          <h3>Secure Checkout</h3>
+          <p>Safe and secure payment options for your peace of mind</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">🚚</div>
+          <h3>Fast Delivery</h3>
+          <p>Quick delivery right to your doorstep</p>
+        </div>
+        <div class="feature-card">
+          <div class="feature-icon">⭐</div>
+          <h3>Great Prices</h3>
+          <p>Competitive prices and regular discounts</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Featured Books Section -->
+  <section class="featured-section">
+    <div class="container">
+      <h2>Featured Books</h2>
+      <p class="section-subtitle">Check out our most popular titles</p>
+      <div id="featured-books" class="books-grid"></div>
+    </div>
+  </section>
+
+  <!-- Testimonials Section -->
+  <section class="testimonials-section">
+    <div class="container">
+      <h2>What Our Customers Say</h2>
+      <div class="testimonials-grid">
+        <div class="testimonial-card">
+          <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+          <p class="testimonial-text">"Great selection and fast shipping! I found exactly what I was looking for."</p>
+          <p class="testimonial-author">- Sarah Johnson</p>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+          <p class="testimonial-text">"The best online bookstore I've used. Customer service is excellent!"</p>
+          <p class="testimonial-author">- Michael Chen</p>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+          <p class="testimonial-text">"Perfect prices and amazing collection. Highly recommended!"</p>
+          <p class="testimonial-author">- Emily Rodriguez</p>
+        </div>
+        <div class="testimonial-card">
+          <div class="testimonial-stars">⭐⭐⭐⭐⭐</div>
+          <p class="testimonial-text">"Fast, reliable, and affordable. My go-to bookstore now."</p>
+          <p class="testimonial-author">- David Thompson</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <footer class="footer">
+    <p>&copy; 2026 Online Book Store. All rights reserved. | Delivering books to readers worldwide</p>
+  </footer>
+
+  <script>
+    // Load featured books on home page
+    window.addEventListener("load", function() {
+      fetch("/api/books/featured")
+        .then(r => r.json())
+        .then(books => {
+          let html = "";
+          books.slice(0, 3).forEach(book => {
+            html += `
+              <div class="book-card" onclick="window.location.href='books.html'">
+                <div class="book-image">📖</div>
+                <div class="book-content">
+                  <h3 class="book-title">${book.title}</h3>
+                  <p class="book-category">${book.category}</p>
+                  <div class="book-rating">⭐ ${book.rating} (${book.reviews})</div>
+                  <div class="book-price">₹${book.price}</div>
+                  <button class="add-cart-btn" onclick="alert('Go to Books page to add to cart')">View</button>
+                </div>
+              </div>
+            `;
+          });
+          document.getElementById("featured-books").innerHTML = html;
+        })
+        .catch(e => console.log("Could not load featured books"));
+    });
+  </script>
+</body>
+</html>

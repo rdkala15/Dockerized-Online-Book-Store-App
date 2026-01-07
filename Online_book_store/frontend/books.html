@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Books - Online Book Store</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <div class="logo" onclick="window.location.href='index.html'">📚 BookStore</div>
+      <div class="nav-actions">
+        <button class="nav-btn" onclick="toggleDarkMode()" title="Toggle Dark Mode">🌓 Theme</button>
+        <button class="nav-btn" onclick="window.location.href='recently-viewed.html'">👀 Viewed (<span id="viewed-count">0</span>)</button>
+        <button class="nav-btn" id="userBtn" style="display: none;" onclick="window.location.href='orders.html'">📋 Orders</button>
+        <button class="nav-btn" id="authBtn" onclick="toggleAuth()">🔐 Login</button>
+        <button class="nav-btn" onclick="toggleWishlist()">❤️ Wishlist (<span id="wishlist-count">0</span>)</button>
+        <button class="nav-btn" onclick="toggleCart()">🛒 Cart (<span id="cart-count">0</span>)</button>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Shopping Cart Sidebar -->
+  <div id="cart-sidebar" class="cart-sidebar">
+    <div class="cart-header">
+      <h3>Shopping Cart</h3>
+      <button class="close-btn" onclick="toggleCart()">✕</button>
+    </div>
+    <div id="cart-items" class="cart-items"></div>
+    <div class="cart-footer">
+      <div class="cart-total">Total: ₹<span id="cart-total">0</span></div>
+      <button class="checkout-btn" onclick="checkout()">💳 Checkout</button>
+      <button class="clear-cart-btn" onclick="clearCart()">Clear Cart</button>
+    </div>
+  </div>
+
+  <!-- Wishlist Sidebar -->
+  <div id="wishlist-sidebar" class="wishlist-sidebar">
+    <div class="wishlist-header">
+      <h3>My Wishlist</h3>
+      <button class="close-btn" onclick="toggleWishlist()">✕</button>
+    </div>
+    <div id="wishlist-items" class="wishlist-items"></div>
+  </div>
+
+  <main class="container">
+    <section id="books-section" class="books-section">
+      <div id="search-section" class="search-section">
+        <div class="section-header">
+          <h2>Featured Books</h2>
+          <p class="subtitle">Find your next great read</p>
+        </div>
+        
+        <!-- Search and Filters -->
+        <div class="filters-container">
+          <div class="search-container">
+            <input type="text" id="searchInput" class="search-box" placeholder="🔍 Search books by title..." onkeyup="filterBooks()">
+            <button class="search-btn" onclick="clearSearch()">Clear</button>
+          </div>
+          
+          <div class="controls-row">
+            <div class="filter-group">
+              <label>Category:</label>
+              <select id="categoryFilter" onchange="filterBooks()">
+                <option value="">All Categories</option>
+              </select>
+            </div>
+            
+            <div class="filter-group">
+              <label>Sort By:</label>
+              <select id="sortFilter" onchange="sortBooks()">
+                <option value="newest">Newest</option>
+                <option value="price-low">Price: Low to High</option>
+                <option value="price-high">Price: High to Low</option>
+                <option value="title">Title (A-Z)</option>
+                <option value="rating">Highest Rated</option>
+              </select>
+            </div>
+            
+            <div class="filter-group">
+              <label>Price Range:</label>
+              <input type="range" id="priceFilter" min="0" max="500" value="500" onchange="filterBooks()">
+              <span id="priceValue">₹500</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      
+      <div id="loading" class="loading">
+        <div class="spinner"></div>
+        <p>Loading your books...</p>
+      </div>
+      
+      <div id="error-msg" class="error-container" style="display: none;"></div>
+      <div id="books" class="books-grid"></div>
+      
+      <div id="no-results" class="no-results" style="display: none;">
+        <div class="no-results-icon">📭</div>
+        <p>No books found matching your criteria</p>
+        <button class="reset-btn" onclick="resetFilters()">Reset Filters</button>
+      </div>
+    </section>
+  </main>
+
+  <!-- Book Details Modal -->
+  <div id="bookModal" class="modal">
+    <div class="modal-content">
+      <button class="modal-close" onclick="closeModal()">✕</button>
+      <div id="modalBody" class="modal-body"></div>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>&copy; 2026 Online Book Store. All rights reserved. | Delivering books to readers worldwide</p>
+  </footer>
+
+  <script>
+    let allBooks = [];
+    let filteredBooks = [];
+    let cart = JSON.parse(localStorage.getItem('cart')) || [];
+    let wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+    let recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
+    let darkMode = localStorage.getItem('darkMode') === 'true';
+    const currentUser = localStorage.getItem('currentUser');
+    const API_URL = "/api/books";
+
+    // Load books when page loads
+    window.addEventListener("load", function() {
+      loadBooks();
+      loadCategories();
+      updateCartUI();
+      updateWishlistUI();
+      updateViewedCount();
+      applyDarkMode();
+      updateAuthUI();
+    });
+
+    function updateAuthUI() {
+      const authBtn = document.getElementById("authBtn");
+      const userBtn = document.getElementById("userBtn");
+      
+      if (currentUser) {
+        authBtn.textContent = "🚪 " + currentUser;
+        authBtn.onclick = logout;
+        userBtn.style.display = "inline-block";
+      } else {
+        authBtn.textContent = "🔐 Login";
+        authBtn.onclick = () => window.location.href = "login.html";
+        userBtn.style.display = "none";
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem("currentUser");
+      updateAuthUI();
+      showNotification("Logged out successfully!");
+    }
+
+    function toggleAuth() {
+      if (currentUser) {
+        logout();
+      } else {
+        window.location.href = "login.html";
+      }
+    }
+
+    function toggleDarkMode() {
+      darkMode = !darkMode;
+      localStorage.setItem('darkMode', darkMode);
+      applyDarkMode();
+    }
+
+    function applyDarkMode() {
+      if (darkMode) {
+        document.body.classList.add('dark-mode');
+      } else {
+        document.body.classList.remove('dark-mode');
+      }
+    }
+
+    function addToViewedBooks(bookId) {
+      const viewed = recentlyViewed.find(v => v.id === bookId);
+      if (!viewed) {
+        const book = allBooks.find(b => b.id === bookId);
+        if (book) {
+          recentlyViewed.unshift({ id: book.id, title: book.title, price: book.price });
+          if (recentlyViewed.length > 10) recentlyViewed.pop();
+          localStorage.setItem('recentlyViewed', JSON.stringify(recentlyViewed));
+          updateViewedCount();
+        }
+      }
+    }
+
+    function updateViewedCount() {
+      document.getElementById("viewed-count").textContent = recentlyViewed.length;
+    }
+
+    function loadBooks() {
+      const loadingDiv = document.getElementById("loading");
+      const errorDiv = document.getElementById("error-msg");
+      
+      loadingDiv.style.display = "block";
+      errorDiv.style.display = "none";
+
+      fetch(API_URL)
+        .then(response => {
+          if (!response.ok) throw new Error(`HTTP error! status: ${response.status}`);
+          return response.json();
+        })
+        .then(data => {
+          loadingDiv.style.display = "none";
+          if (!data || data.length === 0) {
+            showError("No books available at the moment.");
+            return;
+          }
+          allBooks = data;
+          filteredBooks = data;
+          displayBooks(data);
+        })
+        .catch(error => {
+          loadingDiv.style.display = "none";
+          console.error("Error:", error);
+          showError("Unable to load books. Please try again.");
+        });
+    }
+
+    function loadCategories() {
+      fetch("/api/books/categories")
+        .then(r => r.json())
+        .then(categories => {
+          const select = document.getElementById("categoryFilter");
+          categories.forEach(cat => {
+            const option = document.createElement("option");
+            option.value = cat;
+            option.textContent = cat;
+            select.appendChild(option);
+          });
+        })
+        .catch(e => console.log("Could not load categories"));
+    }
+
+    function showError(message) {
+      const errorDiv = document.getElementById("error-msg");
+      errorDiv.style.display = "block";
+      errorDiv.innerHTML = `
+        <div class="error-content">
+          <div class="error-icon">⚠️</div>
+          <p>${message}</p>
+          <button class="retry-btn" onclick="loadBooks()">Try Again</button>
+        </div>
+      `;
+    }
+
+    function displayBooks(books) {
+      const booksContainer = document.getElementById("books");
+      const noResults = document.getElementById("no-results");
+      
+      if (books.length === 0) {
+        booksContainer.innerHTML = "";
+        noResults.style.display = "block";
+        return;
+      }
+      
+      noResults.style.display = "none";
+      let content = "";
+      
+      books.forEach(book => {
+        const inWishlist = wishlist.some(b => b.id === book.id);
+        content += `
+          <div class="book-card" data-title="${book.title.toLowerCase()}" data-price="${book.price}">
+            <div class="book-image" onclick="openModal(${book.id})">📖</div>
+            <div class="book-content">
+              <div class="book-header">
+                <h3 class="book-title" onclick="openModal(${book.id}); addToViewedBooks(${book.id});" style="cursor: pointer;">${book.title}</h3>
+                <button class="wishlist-btn ${inWishlist ? 'active' : ''}" onclick="toggleWishlistItem(${book.id}, '${book.title}', ${book.price})">
+                  ${inWishlist ? '❤️' : '🤍'}
+                </button>
+              </div>
+              <p class="book-category">${book.category}</p>
+              <div class="book-rating">
+                ⭐ ${book.rating} (${book.reviews} reviews)
+              </div>
+              <div class="book-price">₹${book.price}</div>
+              <button class="add-cart-btn" onclick="addToCart(${book.id}, '${book.title}', ${book.price}); addToViewedBooks(${book.id});">
+                🛒 Add to Cart
+              </button>
+            </div>
+          </div>
+        `;
+      });
+      
+      booksContainer.innerHTML = content;
+    }
+
+    function filterBooks() {
+      const searchInput = document.getElementById("searchInput").value.toLowerCase();
+      const categoryFilter = document.getElementById("categoryFilter").value;
+      const priceFilter = parseFloat(document.getElementById("priceFilter").value);
+      
+      document.getElementById("priceValue").textContent = "₹" + priceFilter;
+      
+      filteredBooks = allBooks.filter(book => {
+        const matchesSearch = book.title.toLowerCase().includes(searchInput);
+        const matchesCategory = !categoryFilter || book.category === categoryFilter;
+        const matchesPrice = book.price <= priceFilter;
+        return matchesSearch && matchesCategory && matchesPrice;
+      });
+      
+      sortBooks();
+    }
+
+    function sortBooks() {
+      const sortValue = document.getElementById("sortFilter").value;
+      
+      switch(sortValue) {
+        case "price-low":
+          filteredBooks.sort((a, b) => a.price - b.price);
+          break;
+        case "price-high":
+          filteredBooks.sort((a, b) => b.price - a.price);
+          break;
+        case "title":
+          filteredBooks.sort((a, b) => a.title.localeCompare(b.title));
+          break;
+        case "rating":
+          filteredBooks.sort((a, b) => b.rating - a.rating);
+          break;
+        case "newest":
+        default:
+          filteredBooks.sort((a, b) => b.id - a.id);
+      }
+      
+      displayBooks(filteredBooks);
+    }
+
+    function clearSearch() {
+      document.getElementById("searchInput").value = "";
+      document.getElementById("categoryFilter").value = "";
+      document.getElementById("priceFilter").value = "500";
+      filterBooks();
+    }
+
+    function resetFilters() {
+      clearSearch();
+    }
+
+    function openModal(bookId) {
+      const book = allBooks.find(b => b.id === bookId);
+      if (!book) return;
+      
+      const modalBody = document.getElementById("modalBody");
+      modalBody.innerHTML = `
+        <div class="modal-book">
+          <div class="modal-image">📖</div>
+          <div class="modal-details">
+            <h2>${book.title}</h2>
+            <p class="modal-category">Category: <strong>${book.category}</strong></p>
+            <p class="modal-author">Author: <strong>${book.author}</strong></p>
+            <div class="modal-rating">
+              ⭐ ${book.rating} / 5.0 (${book.reviews} reviews)
+            </div>
+            <p class="modal-description">${book.description}</p>
+            <div class="modal-price">₹${book.price}</div>
+            <button class="add-cart-btn" onclick="addToCart(${book.id}, '${book.title}', ${book.price}); closeModal(); addToViewedBooks(${book.id});">
+              🛒 Add to Cart
+            </button>
+          </div>
+        </div>
+      `;
+      document.getElementById("bookModal").style.display = "block";
+    }
+
+    function closeModal() {
+      document.getElementById("bookModal").style.display = "none";
+    }
+
+    function addToCart(id, title, price) {
+      const item = cart.find(c => c.id === id);
+      if (item) {
+        item.quantity += 1;
+      } else {
+        cart.push({ id, title, price, quantity: 1 });
+      }
+      localStorage.setItem('cart', JSON.stringify(cart));
+      updateCartUI();
+      showNotification(`Added "${title}" to cart!`);
+    }
+
+    function toggleWishlistItem(id, title, price) {
+      const index = wishlist.findIndex(w => w.id === id);
+      if (index > -1) {
+        wishlist.splice(index, 1);
+        showNotification(`Removed from wishlist!`);
+      } else {
+        wishlist.push({ id, title, price });
+        showNotification(`Added to wishlist!`);
+      }
+      localStorage.setItem('wishlist', JSON.stringify(wishlist));
+      updateWishlistUI();
+      displayBooks(filteredBooks);
+    }
+
+    function toggleCart() {
+      document.getElementById("cart-sidebar").classList.toggle("active");
+    }
+
+    function toggleWishlist() {
+      document.getElementById("wishlist-sidebar").classList.toggle("active");
+    }
+
+    function updateCartUI() {
+      const cartItemsDiv = document.getElementById("cart-items");
+      const cartCount = document.getElementById("cart-count");
+      let total = 0;
+      let count = 0;
+      
+      cartItemsDiv.innerHTML = "";
+      
+      cart.forEach(item => {
+        const itemTotal = item.price * item.quantity;
+        total += itemTotal;
+        count += item.quantity;
+        
+        cartItemsDiv.innerHTML += `
+          <div class="cart-item">
+            <div>
+              <strong>${item.title}</strong><br>
+              ₹${item.price} × ${item.quantity} = ₹${itemTotal}
+            </div>
+            <button onclick="removeFromCart(${item.id})">Remove</button>
+          </div>
+        `;
+      });
+      
+      document.getElementById("cart-total").textContent = total;
+      cartCount.textContent = count;
+    }
+
+    function removeFromCart(id) {
+      cart = cart.filter(c => c.id !== id);
+      localStorage.setItem('cart', JSON.stringify(cart));
+      updateCartUI();
+    }
+
+    function clearCart() {
+      if (confirm("Clear entire cart?")) {
+        cart = [];
+        localStorage.setItem('cart', JSON.stringify(cart));
+        updateCartUI();
+      }
+    }
+
+    function checkout() {
+      if (!currentUser) {
+        alert("Please login to checkout");
+        window.location.href = "login.html";
+        return;
+      }
+      
+      if (cart.length === 0) {
+        alert("Your cart is empty!");
+        return;
+      }
+      
+      const total = cart.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+      
+      fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          username: currentUser,
+          items: cart,
+          total: total
+        })
+      })
+      .then(r => r.json())
+      .then(data => {
+        showNotification("✅ Order placed successfully!");
+        cart = [];
+        localStorage.setItem('cart', JSON.stringify(cart));
+        updateCartUI();
+        toggleCart();
+        setTimeout(() => {
+          window.location.href = "orders.html";
+        }, 1500);
+      })
+      .catch(e => alert("Checkout failed"));
+    }
+
+    function updateWishlistUI() {
+      const wishlistItemsDiv = document.getElementById("wishlist-items");
+      const wishlistCount = document.getElementById("wishlist-count");
+      
+      wishlistItemsDiv.innerHTML = "";
+      
+      wishlist.forEach(item => {
+        wishlistItemsDiv.innerHTML += `
+          <div class="wishlist-item">
+            <div>
+              <strong>${item.title}</strong><br>
+              ₹${item.price}
+            </div>
+            <div>
+              <button onclick="toggleWishlistItem(${item.id}, '${item.title}', ${item.price})">Remove</button>
+              <button onclick="addToCart(${item.id}, '${item.title}', ${item.price})">Add to Cart</button>
+            </div>
+          </div>
+        `;
+      });
+      
+      wishlistCount.textContent = wishlist.length;
+    }
+
+    function showNotification(message) {
+      const notif = document.createElement("div");
+      notif.className = "notification";
+      notif.textContent = message;
+      document.body.appendChild(notif);
+      
+      setTimeout(() => {
+        notif.remove();
+      }, 2000);
+    }
+
+    // Close modal on outside click
+    window.onclick = function(event) {
+      const modal = document.getElementById("bookModal");
+      if (event.target == modal) {
+        closeModal();
+      }
+    }
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recently Viewed Books - Online Book Store</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="logo">📚 BookStore</a>
+      <div class="nav-buttons">
+        <button class="nav-btn" onclick="window.location.href='index.html'">🏠 Home</button>
+        <button class="nav-btn" onclick="window.location.href='books.html'">📕 Books</button>
+        <button class="nav-btn" id="darkModeBtn" onclick="toggleDarkMode()">🌓 Dark</button>
+        <button class="nav-btn" id="viewedBtn" onclick="showViewed()">👀 Viewed (<span id="viewed-count">0</span>)</button>
+        <button class="nav-btn" id="ordersBtn" style="display:none;" onclick="window.location.href='orders.html'">📋 Orders</button>
+        <button class="nav-btn" id="authBtn" onclick="toggleAuth()">🔐 Login</button>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-container">
+    <div class="page-header">
+      <h1>Your Recently Viewed Books</h1>
+      <p>Books you've been looking at</p>
+    </div>
+
+    <div id="viewedBooksContainer" class="books">
+      <!-- Recently viewed books will be loaded here -->
+    </div>
+
+    <div id="emptyViewed" class="empty-state" style="display: none;">
+      <h2>You haven't viewed any books yet</h2>
+      <p>Start exploring our collection!</p>
+      <button class="nav-btn" onclick="window.location.href='books.html'">Browse Books</button>
+    </div>
+  </div>
+
+  <footer class="footer">
+    <p>&copy; 2024 Online Book Store. All rights reserved.</p>
+  </footer>
+
+  <script>
+    let allBooks = [];
+    let recentlyViewed = JSON.parse(localStorage.getItem('recentlyViewed')) || [];
+    let darkMode = localStorage.getItem('darkMode') === 'true';
+    const currentUser = localStorage.getItem('currentUser');
+
+    window.addEventListener("load", function() {
+      loadAllBooks();
+      applyDarkMode();
+      updateAuthUI();
+      updateViewedCount();
+    });
+
+    function loadAllBooks() {
+      fetch("/api/books")
+        .then(r => r.json())
+        .then(data => {
+          allBooks = data;
+          displayRecentlyViewed();
+        })
+        .catch(e => console.log("Error loading books"));
+    }
+
+    function displayRecentlyViewed() {
+      const container = document.getElementById("viewedBooksContainer");
+      const emptyDiv = document.getElementById("emptyViewed");
+      
+      if (recentlyViewed.length === 0) {
+        container.innerHTML = "";
+        emptyDiv.style.display = "block";
+        return;
+      }
+      
+      emptyDiv.style.display = "none";
+      container.innerHTML = "";
+      
+      recentlyViewed.forEach(viewed => {
+        const book = allBooks.find(b => b.id === viewed.id);
+        if (!book) return;
+        
+        container.innerHTML += `
+          <div class="book-card" data-id="${book.id}">
+            <div class="book-image" onclick="openModal(${book.id})">📖</div>
+            <div class="book-content">
+              <div class="book-header">
+                <h3 class="book-title" onclick="openModal(${book.id})" style="cursor: pointer;">${book.title}</h3>
+                <button class="wishlist-btn" onclick="toggleWishlist(${book.id}, '${book.title}', ${book.price})">
+                  🤍
+                </button>
+              </div>
+              <p class="book-category">${book.category}</p>
+              <div class="book-rating">
+                ⭐ ${book.rating} (${book.reviews} reviews)
+              </div>
+              <div class="book-price">₹${book.price}</div>
+              <button class="add-cart-btn" onclick="addToCart(${book.id}, '${book.title}', ${book.price})">
+                🛒 Add to Cart
+              </button>
+            </div>
+          </div>
+        `;
+      });
+    }
+
+    function openModal(bookId) {
+      const book = allBooks.find(b => b.id === bookId);
+      if (!book) return;
+      
+      const modalBody = document.getElementById("modalBody");
+      modalBody.innerHTML = `
+        <div class="modal-book">
+          <div class="modal-image">📖</div>
+          <div class="modal-details">
+            <h2>${book.title}</h2>
+            <p class="modal-category">Category: <strong>${book.category}</strong></p>
+            <p class="modal-author">Author: <strong>${book.author}</strong></p>
+            <div class="modal-rating">
+              ⭐ ${book.rating} / 5.0 (${book.reviews} reviews)
+            </div>
+            <p class="modal-description">${book.description}</p>
+            <div class="modal-price">₹${book.price}</div>
+            <button class="add-cart-btn" onclick="addToCart(${book.id}, '${book.title}', ${book.price}); closeModal();">
+              🛒 Add to Cart
+            </button>
+          </div>
+        </div>
+      `;
+      document.getElementById("bookModal").style.display = "block";
+    }
+
+    function closeModal() {
+      const modal = document.getElementById("bookModal");
+      if (modal) modal.style.display = "none";
+    }
+
+    function addToCart(id, title, price) {
+      let cart = JSON.parse(localStorage.getItem('cart')) || [];
+      const item = cart.find(c => c.id === id);
+      if (item) {
+        item.quantity += 1;
+      } else {
+        cart.push({ id, title, price, quantity: 1 });
+      }
+      localStorage.setItem('cart', JSON.stringify(cart));
+      showNotification(`Added "${title}" to cart!`);
+    }
+
+    function toggleWishlist(id, title, price) {
+      let wishlist = JSON.parse(localStorage.getItem('wishlist')) || [];
+      const index = wishlist.findIndex(w => w.id === id);
+      if (index > -1) {
+        wishlist.splice(index, 1);
+        showNotification(`Removed from wishlist!`);
+      } else {
+        wishlist.push({ id, title, price });
+        showNotification(`Added to wishlist!`);
+      }
+      localStorage.setItem('wishlist', JSON.stringify(wishlist));
+      displayRecentlyViewed();
+    }
+
+    function toggleDarkMode() {
+      darkMode = !darkMode;
+      localStorage.setItem('darkMode', darkMode);
+      applyDarkMode();
+    }
+
+    function applyDarkMode() {
+      if (darkMode) {
+        document.body.classList.add('dark-mode');
+      } else {
+        document.body.classList.remove('dark-mode');
+      }
+    }
+
+    function updateAuthUI() {
+      const authBtn = document.getElementById("authBtn");
+      const ordersBtn = document.getElementById("ordersBtn");
+      
+      if (currentUser) {
+        authBtn.textContent = "🚪 " + currentUser;
+        authBtn.onclick = logout;
+        ordersBtn.style.display = "inline-block";
+      } else {
+        authBtn.textContent = "🔐 Login";
+        authBtn.onclick = () => window.location.href = "login.html";
+        ordersBtn.style.display = "none";
+      }
+    }
+
+    function logout() {
+      localStorage.removeItem("currentUser");
+      updateAuthUI();
+      showNotification("Logged out successfully!");
+    }
+
+    function toggleAuth() {
+      if (currentUser) {
+        logout();
+      } else {
+        window.location.href = "login.html";
+      }
+    }
+
+    function updateViewedCount() {
+      document.getElementById("viewed-count").textContent = recentlyViewed.length;
+    }
+
+    function showViewed() {
+      // Already on this page
+      window.location.href = "recently-viewed.html";
+    }
+
+    function showNotification(message) {
+      const notif = document.createElement("div");
+      notif.className = "notification";
+      notif.textContent = message;
+      document.body.appendChild(notif);
+      
+      setTimeout(() => {
+        notif.remove();
+      }, 2000);
+    }
+
+    // Create modal if it doesn't exist
+    if (!document.getElementById("bookModal")) {
+      document.body.innerHTML += `
+        <div id="bookModal" class="modal">
+          <div class="modal-content">
+            <span class="close" onclick="closeModal()">&times;</span>
+            <div id="modalBody"></div>
+          </div>
+        </div>
+      `;
+    }
+
+    window.onclick = function(event) {
+      const modal = document.getElementById("bookModal");
+      if (event.target == modal) {
+        closeModal();
+      }
+    }
+  </script>
+</body>
+</html>
